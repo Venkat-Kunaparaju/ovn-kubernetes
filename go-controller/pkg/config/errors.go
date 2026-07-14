@@ -50,7 +50,7 @@ func NewInvalidCIDRAddressError() *ValidationError {
 func NewHostSubnetMaskError(hostSubnetLength, clusterSubnetLength int) *ValidationError {
 	return &ValidationError{
 		Type: ErrHostSubnetMask,
-		Message: fmt.Sprintf("cannot use a host subnet length mask shorter than or equal to the cluster subnet mask. "+
+		Message: fmt.Sprintf("cannot use a host subnet length mask shorter than the cluster subnet mask. "+
 			"host subnet length: %d, cluster subnet length: %d", hostSubnetLength, clusterSubnetLength),
 	}
 }

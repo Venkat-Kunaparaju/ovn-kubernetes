@@ -63,7 +63,7 @@ type Layer3Config struct {
 	// Subnets are used for the pod network across the cluster.
 	//
 	// Each IP family can have multiple subnets.
-	// For each IP family, every node allocates a smaller subnet from the provided subnets.
+	// For each IP family, every node is allocated a subnet smaller than or equal to one of the provided subnets.
 	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=400
@@ -82,15 +82,17 @@ type Layer3Config struct {
 	JoinSubnets DualStackCIDRs `json:"joinSubnets,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="!has(self.hostSubnet) || !isCIDR(self.cidr) || self.hostSubnet > cidr(self.cidr).prefixLength()", message="HostSubnet must be smaller than CIDR subnet"
+// +kubebuilder:validation:XValidation:rule="!has(self.hostSubnet) || !isCIDR(self.cidr) || self.hostSubnet >= cidr(self.cidr).prefixLength()", message="HostSubnet prefix length must be greater than or equal to CIDR prefix length"
 // +kubebuilder:validation:XValidation:rule="!has(self.hostSubnet) || !isCIDR(self.cidr) || (cidr(self.cidr).ip().family() != 4 || self.hostSubnet < 32)", message="HostSubnet must < 32 for ipv4 CIDR"
 type Layer3Subnet struct {
-	// CIDR specifies L3Subnet, which is split into smaller subnets for every node.
+	// CIDR specifies the address space from which node subnets are allocated.
 	//
 	// +required
 	CIDR CIDR `json:"cidr,omitempty"`
 
 	// HostSubnet specifies the subnet size for every node.
+	//
+	// When HostSubnet equals CIDR's prefix length, the CIDR can be allocated to only one node.
 	//
 	// When not set, it will be assigned automatically.
 	//

@@ -25,7 +25,7 @@ type Layer3ConfigApplyConfiguration struct {
 	// Subnets are used for the pod network across the cluster.
 	//
 	// Each IP family can have multiple subnets.
-	// For each IP family, every node allocates a smaller subnet from the provided subnets.
+	// For each IP family, every node is allocated a subnet smaller than or equal to one of the provided subnets.
 	Subnets []Layer3SubnetApplyConfiguration `json:"subnets,omitempty"`
 	// JoinSubnets are used inside the OVN network topology.
 	//

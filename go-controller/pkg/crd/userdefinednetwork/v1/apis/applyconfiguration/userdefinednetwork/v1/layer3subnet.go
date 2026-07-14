@@ -12,9 +12,11 @@ import (
 // Layer3SubnetApplyConfiguration represents a declarative configuration of the Layer3Subnet type for use
 // with apply.
 type Layer3SubnetApplyConfiguration struct {
-	// CIDR specifies L3Subnet, which is split into smaller subnets for every node.
+	// CIDR specifies the address space from which node subnets are allocated.
 	CIDR *userdefinednetworkv1.CIDR `json:"cidr,omitempty"`
 	// HostSubnet specifies the subnet size for every node.
+	//
+	// When HostSubnet equals CIDR's prefix length, the CIDR can be allocated to only one node.
 	//
 	// When not set, it will be assigned automatically.
 	HostSubnet *int32 `json:"hostSubnet,omitempty"`

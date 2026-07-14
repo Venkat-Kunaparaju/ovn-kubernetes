@@ -536,12 +536,12 @@ spec:
                           Subnets are used for the pod network across the cluster.
 
                           Each IP family can have multiple subnets.
-                          For each IP family, every node allocates a smaller subnet from the provided subnets.
+                          For each IP family, every node is allocated a subnet smaller than or equal to one of the provided subnets.
                         items:
                           properties:
                             cidr:
-                              description: CIDR specifies L3Subnet, which is split
-                                into smaller subnets for every node.
+                              description: CIDR specifies the address space from which
+                                node subnets are allocated.
                               maxLength: 43
                               type: string
                               x-kubernetes-validations:
@@ -550,6 +550,8 @@ spec:
                             hostSubnet:
                               description: |-
                                 HostSubnet specifies the subnet size for every node.
+
+                                When HostSubnet equals CIDR's prefix length, the CIDR can be allocated to only one node.
 
                                 When not set, it will be assigned automatically.
                               format: int32
@@ -560,9 +562,10 @@ spec:
                           - cidr
                           type: object
                           x-kubernetes-validations:
-                          - message: HostSubnet must be smaller than CIDR subnet
+                          - message: HostSubnet prefix length must be greater than
+                              or equal to CIDR prefix length
                             rule: '!has(self.hostSubnet) || !isCIDR(self.cidr) ||
-                              self.hostSubnet > cidr(self.cidr).prefixLength()'
+                              self.hostSubnet >= cidr(self.cidr).prefixLength()'
                           - message: HostSubnet must < 32 for ipv4 CIDR
                             rule: '!has(self.hostSubnet) || !isCIDR(self.cidr) ||
                               (cidr(self.cidr).ip().family() != 4 || self.hostSubnet

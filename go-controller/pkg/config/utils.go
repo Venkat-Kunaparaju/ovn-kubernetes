@@ -50,9 +50,9 @@ func (c CIDRNetworkEntry) String() string {
 // of CIDR and netmasks the SDN can allocate addresses from including how that
 // network space is partitioned for each of the cluster nodes. When no host
 // specific prefix length is specified, the provided ones are assumed as
-// default. The host specific prefix length is validated to be greater than the
-// overall subnet length. When 0 is specified as default host specific prefix
-// length, no host specific prefix length is allowed or validated.
+// default. The host specific prefix length is validated to be greater than or
+// equal to the overall subnet length. When 0 is specified as default host
+// specific prefix length, no host specific prefix length is allowed or validated.
 func ParseClusterSubnetEntriesWithDefaults(clusterSubnetCmd string, ipv4HostLength, ipv6HostLength int) ([]CIDRNetworkEntry, error) {
 	var parsedClusterList []CIDRNetworkEntry
 	clusterEntriesList := strings.Split(clusterSubnetCmd, ",")
@@ -118,7 +118,7 @@ func ParseClusterSubnetEntriesWithDefaults(clusterSubnetCmd string, ipv4HostLeng
 				}
 			}
 
-			if parsedClusterEntry.HostSubnetLength <= entryMaskLength {
+			if parsedClusterEntry.HostSubnetLength < entryMaskLength {
 				return nil, NewHostSubnetMaskError(parsedClusterEntry.HostSubnetLength, entryMaskLength)
 			}
 		}

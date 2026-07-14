@@ -61,17 +61,6 @@ var _ = Describe("NetAttachDefTemplate", func() {
 			},
 			config.NewInvalidCIDRAddressError().Error(),
 		),
-		Entry("invalid layer3 host-subnet mask",
-			&udnv1.UserDefinedNetworkSpec{
-				Topology: udnv1.NetworkTopologyLayer3,
-				Layer3: &udnv1.Layer3Config{
-					Subnets: []udnv1.Layer3Subnet{
-						{CIDR: "10.10.0.0/24", HostSubnet: -1},
-					},
-				},
-			},
-			config.NewHostSubnetMaskError(24, 24).Error(), // -1 is not a valid host subnet mask, it's converted to 24
-		),
 		Entry("layer3 host-subnet mask is smaller then cluster-subnet mask",
 			&udnv1.UserDefinedNetworkSpec{
 				Topology: udnv1.NetworkTopologyLayer3,
@@ -82,17 +71,6 @@ var _ = Describe("NetAttachDefTemplate", func() {
 				},
 			},
 			config.NewHostSubnetMaskError(16, 24).Error(),
-		),
-		Entry("layer3 host-subnet mask equal to cluster-subnet mask",
-			&udnv1.UserDefinedNetworkSpec{
-				Topology: udnv1.NetworkTopologyLayer3,
-				Layer3: &udnv1.Layer3Config{
-					Subnets: []udnv1.Layer3Subnet{
-						{CIDR: "10.10.0.0/24", HostSubnet: 24},
-					},
-				},
-			},
-			config.NewHostSubnetMaskError(24, 24).Error(),
 		),
 		Entry("invalid layer3 host-subnet; IPv4 mask is bigger then 32",
 			&udnv1.UserDefinedNetworkSpec{

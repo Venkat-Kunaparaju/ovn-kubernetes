@@ -74,8 +74,8 @@ func TestParseClusterSubnetEntries(t *testing.T) {
 		{
 			name:            "Cluster Subnet length same as host subnet length",
 			cmdLineArg:      "10.132.0.0/24/24",
-			clusterNetworks: nil,
-			expectedErr:     true,
+			clusterNetworks: []CIDRNetworkEntry{{CIDR: ovntest.MustParseIPNet("10.132.0.0/24"), HostSubnetLength: 24}},
+			expectedErr:     false,
 		},
 		{
 			name:            "IPv4 host Subnet invalid",
@@ -84,10 +84,10 @@ func TestParseClusterSubnetEntries(t *testing.T) {
 			expectedErr:     true,
 		},
 		{
-			name:            "Test that defaulting to hostsubnetlength with 24 bit cluster prefix fails",
+			name:            "Test that defaulting to hostsubnetlength with 24 bit cluster prefix works",
 			cmdLineArg:      "10.128.0.0/24",
-			clusterNetworks: nil,
-			expectedErr:     true,
+			clusterNetworks: []CIDRNetworkEntry{{CIDR: ovntest.MustParseIPNet("10.128.0.0/24"), HostSubnetLength: 24}},
+			expectedErr:     false,
 		},
 		{
 			name:            "IPv6",
@@ -114,10 +114,10 @@ func TestParseClusterSubnetEntries(t *testing.T) {
 			expectedErr:     true,
 		},
 		{
-			name:            "IPv6 can't use /64 cluster net",
-			cmdLineArg:      "fda6::/64",
-			clusterNetworks: nil,
-			expectedErr:     true,
+			name:            "IPv6 can use a /64 cluster net for one node",
+			cmdLineArg:      "fda6::/64/64",
+			clusterNetworks: []CIDRNetworkEntry{{CIDR: ovntest.MustParseIPNet("fda6::/64"), HostSubnetLength: 64}},
+			expectedErr:     false,
 		},
 		{
 			name:       "Two CIDRs correctly formatted with spaces",
@@ -137,11 +137,12 @@ func TestParseClusterSubnetEntries(t *testing.T) {
 			expectedErr:                 false,
 		},
 		{
-			name:                        "Single IPv4 CIDR with invalid default host subnet length",
+			name:                        "Single IPv4 CIDR with equal default host subnet length",
 			cmdLineArg:                  "10.132.0.0/26",
 			withDefaultHostSubnetLength: true,
 			defaultIPv4HostSubnetLength: 26,
-			expectedErr:                 true,
+			clusterNetworks:             []CIDRNetworkEntry{{CIDR: ovntest.MustParseIPNet("10.132.0.0/26"), HostSubnetLength: 26}},
+			expectedErr:                 false,
 		},
 		{
 			name:                        "Single IPv4 CIDR no host subnet length allowed or validated",
