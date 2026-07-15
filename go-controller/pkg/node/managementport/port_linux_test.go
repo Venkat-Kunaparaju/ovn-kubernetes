@@ -1287,6 +1287,24 @@ var _ = Describe("Management Port tests", func() {
 			Expect(routeSubnets).NotTo(ContainElement("10.1.0.0/16"))
 			Expect(routeSubnets).To(ConsistOf(fmt.Sprintf("%s/32", config.Gateway.MasqueradeIPs.V4HostETPLocalMasqueradeIP.String())))
 		})
+		It("does not add the local cluster subnet route through the management port", func() {
+			config.Default.ClusterSubnets = []config.CIDRNetworkEntry{
+				{CIDR: ovntest.MustParseIPNet("10.1.1.0/24"), HostSubnetLength: 24},
+				{CIDR: ovntest.MustParseIPNet("10.1.2.0/24"), HostSubnetLength: 24},
+			}
+
+			cfg, err := newManagementPortIPFamilyConfig(hostSubnets[0], false, netInfo)
+			Expect(err).NotTo(HaveOccurred())
+
+			var routeSubnets []string
+			for _, subnet := range cfg.clusterSubnets {
+				routeSubnets = append(routeSubnets, subnet.String())
+			}
+			Expect(routeSubnets).To(ConsistOf(
+				"10.1.2.0/24",
+				fmt.Sprintf("%s/32", config.Gateway.MasqueradeIPs.V4HostETPLocalMasqueradeIP.String()),
+			))
+		})
 		It("Creates managementPort by default", func() {
 			mgmtPort, err := NewManagementPortController(nil, node, hostSubnets, netdevName, rep, nil, netInfo)
 			Expect(err).NotTo(HaveOccurred())

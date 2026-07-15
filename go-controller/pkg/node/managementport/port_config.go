@@ -133,7 +133,8 @@ func newManagementPortIPFamilyConfig(hostSubnet *net.IPNet, isIPv6 bool, netInfo
 	// capture all the subnets for which we need to add routes through management port
 	if managementPortRoutesDefaultClusterSubnets() {
 		for _, subnet := range config.Default.ClusterSubnets {
-			if utilnet.IsIPv6CIDR(subnet.CIDR) == isIPv6 {
+			if utilnet.IsIPv6CIDR(subnet.CIDR) == isIPv6 &&
+				subnet.CIDR.String() != hostSubnet.String() {
 				cfg.clusterSubnets = append(cfg.clusterSubnets, subnet.CIDR)
 			}
 		}

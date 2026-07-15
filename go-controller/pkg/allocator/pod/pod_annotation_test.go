@@ -259,6 +259,78 @@ func Test_allocatePodAnnotationWithTunnelIDReturnsUpdatedPod(t *testing.T) {
 	g.Expect(updatedPodAnnotation.TunnelID).To(gomega.Equal(100))
 }
 
+func TestAddRoutesGatewayIPSkipsConnectedClusterSubnet(t *testing.T) {
+	originalDefault := config.Default
+	originalKubernetes := config.Kubernetes
+	originalGateway := config.Gateway
+	t.Cleanup(func() {
+		config.Default = originalDefault
+		config.Kubernetes = originalKubernetes
+		config.Gateway = originalGateway
+	})
+	config.Gateway.V4JoinSubnet = "100.64.0.0/16"
+	config.Gateway.MasqueradeIPs.V4OVNServiceHairpinMasqueradeIP = ovntest.MustParseIP("169.254.169.5")
+
+	t.Run("default network", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		config.Default.ClusterSubnets = []config.CIDRNetworkEntry{
+			{CIDR: ovntest.MustParseIPNet("10.244.0.0/24"), HostSubnetLength: 24},
+			{CIDR: ovntest.MustParseIPNet("10.245.0.0/24"), HostSubnetLength: 24},
+		}
+		config.Kubernetes.ServiceCIDRs = ovntest.MustParseIPNets("10.96.0.0/16")
+		podAnnotation := &util.PodAnnotation{
+			IPs:  ovntest.MustParseIPNets("10.244.0.3/24"),
+			Role: types.NetworkRolePrimary,
+		}
+
+		err := AddRoutesGatewayIP(
+			&util.DefaultNetInfo{},
+			&corev1.Node{},
+			&corev1.Pod{},
+			podAnnotation,
+			nil,
+		)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		g.Expect(util.StringSlice(podAnnotation.Routes)).To(gomega.Equal([]string{
+			"10.245.0.0/24 10.244.0.1",
+			"10.96.0.0/16 10.244.0.1",
+			"169.254.169.5/32 10.244.0.1",
+			"100.64.0.0/16 10.244.0.1",
+		}))
+		g.Expect(util.StringSlice(podAnnotation.Gateways)).To(gomega.Equal([]string{"10.244.0.1"}))
+	})
+
+	t.Run("layer3 UDN with multiple subnets", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		netInfo, err := util.NewNetInfo(&ovncnitypes.NetConf{
+			Topology: types.Layer3Topology,
+			NetConf: cnitypes.NetConf{
+				Name: "network",
+			},
+			Subnets: "10.244.0.0/24/24,10.245.0.0/24/24",
+			Role:    types.NetworkRoleSecondary,
+		})
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		podAnnotation := &util.PodAnnotation{
+			IPs:  ovntest.MustParseIPNets("10.244.0.3/24"),
+			Role: types.NetworkRoleSecondary,
+		}
+
+		err = AddRoutesGatewayIP(
+			netInfo,
+			&corev1.Node{},
+			&corev1.Pod{},
+			podAnnotation,
+			&nadapi.NetworkSelectionElement{},
+		)
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		g.Expect(util.StringSlice(podAnnotation.Routes)).To(gomega.Equal([]string{
+			"10.245.0.0/24 10.244.0.1",
+		}))
+		g.Expect(podAnnotation.Gateways).To(gomega.BeEmpty())
+	})
+}
+
 func Test_allocatePodAnnotationWithRollback(t *testing.T) {
 	randomMac, err := util.GenerateRandMAC()
 	if err != nil {

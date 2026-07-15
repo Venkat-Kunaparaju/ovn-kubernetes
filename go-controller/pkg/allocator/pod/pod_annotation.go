@@ -687,7 +687,8 @@ func AddRoutesGatewayIP(
 				}
 				gatewayIPnet := netinfo.GetNodeGatewayIP(nodeSubnet)
 				for _, clusterSubnet := range netinfo.Subnets() {
-					if isIPv6 == utilnet.IsIPv6CIDR(clusterSubnet.CIDR) {
+					if isIPv6 == utilnet.IsIPv6CIDR(clusterSubnet.CIDR) &&
+						clusterSubnet.CIDR.String() != nodeSubnet.String() {
 						podAnnotation.Routes = append(podAnnotation.Routes, util.PodRoute{
 							Dest:    clusterSubnet.CIDR,
 							NextHop: gatewayIPnet.IP,
@@ -741,7 +742,8 @@ func AddRoutesGatewayIP(
 
 		// Ensure default pod network traffic always goes to OVN
 		for _, clusterSubnet := range config.Default.ClusterSubnets {
-			if isIPv6 == utilnet.IsIPv6CIDR(clusterSubnet.CIDR) {
+			if isIPv6 == utilnet.IsIPv6CIDR(clusterSubnet.CIDR) &&
+				clusterSubnet.CIDR.String() != nodeSubnet.String() {
 				podAnnotation.Routes = append(podAnnotation.Routes, util.PodRoute{
 					Dest:    clusterSubnet.CIDR,
 					NextHop: gatewayIPnet.IP,

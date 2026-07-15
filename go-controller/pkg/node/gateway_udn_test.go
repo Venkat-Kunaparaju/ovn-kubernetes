@@ -1854,6 +1854,57 @@ func TestNoOverlayLocalGatewayUsesNoPrefixRouteManagementPortIPs(t *testing.T) {
 	g.Expect(udnGateway.useNoPrefixRouteManagementPortIPs()).To(BeFalse())
 }
 
+func TestOverlaySharedEqualClusterAndNodeSubnetOmitsGatewayRoute(t *testing.T) {
+	g := NewWithT(t)
+	g.Expect(config.PrepareTestConfig()).To(Succeed())
+	t.Cleanup(func() {
+		_ = config.PrepareTestConfig()
+	})
+	config.Gateway.Mode = config.GatewayModeShared
+	config.IPv4Mode = true
+	config.IPv6Mode = false
+	config.Kubernetes.ServiceCIDRs = ovntest.MustParseIPNets("172.16.1.0/24")
+	config.Gateway.V4MasqueradeSubnet = "169.254.0.0/17"
+
+	nad := ovntest.GenerateNAD("bluenet", "rednad", "greenamespace",
+		types.Layer3Topology, "100.128.0.0/24/24", types.NetworkRolePrimary)
+	ovntest.AnnotateNADWithNetworkID("3", nad)
+	netInfo, err := util.ParseNADInfo(nad)
+	g.Expect(err).NotTo(HaveOccurred())
+	udnGateway := &UserDefinedNetworkGateway{
+		NetInfo: netInfo,
+		node: &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "worker1",
+				Annotations: map[string]string{
+					"k8s.ovn.org/node-subnets": `{"bluenet":["100.128.0.0/24"]}`,
+				},
+			},
+		},
+		gateway:          &gateway{},
+		vrfTableId:       1007,
+		gwInterfaceIndex: 11,
+	}
+	mpLink := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: "ovn-k8s-mp3", Index: 23}}
+
+	routes, err := udnGateway.computeRoutesForUDN(mpLink)
+	g.Expect(err).NotTo(HaveOccurred())
+	var hasLocalClusterRoute, hasETPMasqueradeRoute bool
+	for _, route := range routes {
+		if route.Dst == nil {
+			continue
+		}
+		if route.Dst.String() == "100.128.0.0/24" && route.Gw.Equal(ovntest.MustParseIP("100.128.0.1")) {
+			hasLocalClusterRoute = true
+		}
+		if route.Dst.String() == "169.254.169.3/32" && route.Gw.Equal(ovntest.MustParseIP("100.128.0.1")) {
+			hasETPMasqueradeRoute = true
+		}
+	}
+	g.Expect(hasLocalClusterRoute).To(BeFalse())
+	g.Expect(hasETPMasqueradeRoute).To(BeTrue())
+}
+
 func TestNoOverlayLocalGatewayUDNGatewayRoutesUseLocalSubnet(t *testing.T) {
 	prepareNoOverlayLocalGatewayTestConfig(t)
 	g := NewWithT(t)

@@ -586,7 +586,8 @@ func (udng *UserDefinedNetworkGateway) computeRoutesForUDN(mpLink netlink.Link) 
 				continue
 			}
 			for _, clusterSubnet := range udng.Subnets() {
-				if clusterSubnet.CIDR.Contains(gwIP.IP) {
+				if clusterSubnet.CIDR.Contains(gwIP.IP) &&
+					clusterSubnet.CIDR.String() != localSubnet.String() {
 					retVal = append(retVal, netlink.Route{
 						LinkIndex: mpLink.Attrs().Index,
 						Dst:       clusterSubnet.CIDR,
